@@ -41,7 +41,7 @@ static int     SX126x_RXEN;
 #define delay(ms) esp_rom_delay_us(ms*1000)
 
 
-void LoRaErrorDefault(int error)
+void LoRaError(int error)
 {
 	if (debugPrint) {
 		ESP_LOGE(TAG, "LoRaErrorDefault=%d", error);
@@ -50,9 +50,6 @@ void LoRaErrorDefault(int error)
 		vTaskDelay(1);
 	}
 }
-
-__attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
-
 
 void LoRaInit(void)
 {
@@ -74,30 +71,30 @@ void LoRaInit(void)
 	txActive = false;
 	debugPrint = false;
 
-	gpio_reset_pin(SX126x_SPI_SELECT);
-	gpio_set_direction(SX126x_SPI_SELECT, GPIO_MODE_OUTPUT);
-	gpio_set_level(SX126x_SPI_SELECT, 1);
+	gpio_reset_pin((gpio_num_t)SX126x_SPI_SELECT);
+	gpio_set_direction((gpio_num_t)SX126x_SPI_SELECT, GPIO_MODE_OUTPUT);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, 1);
 
-	gpio_reset_pin(SX126x_RESET);
-	gpio_set_direction(SX126x_RESET, GPIO_MODE_OUTPUT);
+	gpio_reset_pin((gpio_num_t)SX126x_RESET);
+	gpio_set_direction((gpio_num_t)SX126x_RESET, GPIO_MODE_OUTPUT);
 	
-	gpio_reset_pin(SX126x_BUSY);
-	gpio_set_direction(SX126x_BUSY, GPIO_MODE_INPUT);
+	gpio_reset_pin((gpio_num_t)SX126x_BUSY);
+	gpio_set_direction((gpio_num_t)SX126x_BUSY, GPIO_MODE_INPUT);
 
 	if (SX126x_TXEN != -1) {
-		gpio_reset_pin(SX126x_TXEN);
-		gpio_set_direction(SX126x_TXEN, GPIO_MODE_OUTPUT);
+		gpio_reset_pin((gpio_num_t)SX126x_TXEN);
+		gpio_set_direction((gpio_num_t)SX126x_TXEN, GPIO_MODE_OUTPUT);
 	}
 
 	if (SX126x_RXEN != -1) {
-		gpio_reset_pin(SX126x_RXEN);
-		gpio_set_direction(SX126x_RXEN, GPIO_MODE_OUTPUT);
+		gpio_reset_pin((gpio_num_t)SX126x_RXEN);
+		gpio_set_direction((gpio_num_t)SX126x_RXEN, GPIO_MODE_OUTPUT);
 	}
 
 	spi_bus_config_t spi_bus_config = {
-		.sclk_io_num = CONFIG_SCLK_GPIO,
 		.mosi_io_num = CONFIG_MOSI_GPIO,
 		.miso_io_num = CONFIG_MISO_GPIO,
+		.sclk_io_num = CONFIG_SCLK_GPIO,
 		.quadwp_io_num = -1,
 		.quadhd_io_num = -1
 	};
@@ -430,9 +427,9 @@ void SetTxPower(int8_t txPowerInDbm)
 void Reset(void)
 {
 	delay(10);
-	gpio_set_level(SX126x_RESET,0);
+	gpio_set_level((gpio_num_t)SX126x_RESET,0);
 	delay(20);
-	gpio_set_level(SX126x_RESET,1);
+	gpio_set_level((gpio_num_t)SX126x_RESET,1);
 	delay(10);
 	// ensure BUSY is low (state meachine ready)
 	WaitForIdle(BUSY_WAIT);
@@ -742,8 +739,8 @@ void SetRxEnable(void)
 		ESP_LOGI(TAG, "SetRxEnable:SX126x_TXEN=%d SX126x_RXEN=%d", SX126x_TXEN, SX126x_RXEN);
 	}
 	if ((SX126x_TXEN != -1) && (SX126x_RXEN != -1)) {
-		gpio_set_level(SX126x_RXEN, HIGH);
-		gpio_set_level(SX126x_TXEN, LOW);
+		gpio_set_level((gpio_num_t)SX126x_RXEN, HIGH);
+		gpio_set_level((gpio_num_t)SX126x_TXEN, LOW);
 	}
 }
 
@@ -786,8 +783,8 @@ void SetTxEnable(void)
 		ESP_LOGI(TAG, "SetTxEnable:SX126x_TXEN=%d SX126x_RXEN=%d", SX126x_TXEN, SX126x_RXEN);
 	}
 	if ((SX126x_TXEN != -1) && (SX126x_RXEN != -1)){
-		gpio_set_level(SX126x_RXEN, LOW);
-		gpio_set_level(SX126x_TXEN, HIGH);
+		gpio_set_level((gpio_num_t)SX126x_RXEN, LOW);
+		gpio_set_level((gpio_num_t)SX126x_TXEN, HIGH);
 	}
 }
 
@@ -821,10 +818,10 @@ void WaitForIdle(unsigned long timeout)
     TickType_t start = xTaskGetTickCount();
     delayMicroseconds(1);
     while(xTaskGetTickCount() - start < (timeout/portTICK_PERIOD_MS)) {
-        if (gpio_get_level(SX126x_BUSY) == 0) break;
+        if (gpio_get_level((gpio_num_t)SX126x_BUSY) == 0) break;
         delayMicroseconds(1);
     }
-    if (gpio_get_level(SX126x_BUSY)) {
+    if (gpio_get_level((gpio_num_t)SX126x_BUSY)) {
         ESP_LOGE(TAG, "WaitForIdle Timeout timeout=%lu", timeout);
         LoRaError(ERR_IDLE_TIMEOUT);
     }
@@ -846,7 +843,7 @@ uint8_t ReadBuffer(uint8_t *rxData, int16_t rxDataLen)
 	WaitForIdle(BUSY_WAIT);
 
 	// start transfer
-	gpio_set_level(SX126x_SPI_SELECT, LOW);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, LOW);
 
 	spi_transfer(SX126X_CMD_READ_BUFFER); // 0x1E
 	spi_transfer(offset);
@@ -857,7 +854,7 @@ uint8_t ReadBuffer(uint8_t *rxData, int16_t rxDataLen)
 	}
 
 	// stop transfer
-	gpio_set_level(SX126x_SPI_SELECT, HIGH);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, HIGH);
 
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
@@ -872,7 +869,7 @@ void WriteBuffer(uint8_t *txData, int16_t txDataLen)
 	WaitForIdle(BUSY_WAIT);
 
 	// start transfer
-	gpio_set_level(SX126x_SPI_SELECT, LOW);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, LOW);
 
 	spi_transfer(SX126X_CMD_WRITE_BUFFER); // 0x0E
 	spi_transfer(0); //offset in tx fifo
@@ -882,7 +879,7 @@ void WriteBuffer(uint8_t *txData, int16_t txDataLen)
 	}
 
 	// stop transfer
-	gpio_set_level(SX126x_SPI_SELECT, HIGH);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, HIGH);
 
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
@@ -897,7 +894,7 @@ void WriteRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 		ESP_LOGI(TAG, "WriteRegister: REG=0x%02x", reg);
 	}
 	// start transfer
-	gpio_set_level(SX126x_SPI_SELECT, LOW);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, LOW);
 
 	// send command byte
 	spi_transfer(SX126X_CMD_WRITE_REGISTER); // 0x0D
@@ -914,7 +911,7 @@ void WriteRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 	}
 
 	// stop transfer
-	gpio_set_level(SX126x_SPI_SELECT, HIGH);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, HIGH);
 
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
@@ -935,7 +932,7 @@ void ReadRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 	}
 
 	// start transfer
-	gpio_set_level(SX126x_SPI_SELECT, LOW);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, LOW);
 
 	// send command byte
 	spi_transfer(SX126X_CMD_READ_REGISTER); // 0x1D
@@ -951,7 +948,7 @@ void ReadRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 	}
 
 	// stop transfer
-	gpio_set_level(SX126x_SPI_SELECT, HIGH);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, HIGH);
 
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
@@ -982,7 +979,7 @@ uint8_t WriteCommand2(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 	WaitForIdle(BUSY_WAIT);
 
 	// start transfer
-	gpio_set_level(SX126x_SPI_SELECT, LOW);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, LOW);
 
 	// send command byte
 	if(debugPrint) {
@@ -1013,7 +1010,7 @@ uint8_t WriteCommand2(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 	} 
 
 	// stop transfer
-	gpio_set_level(SX126x_SPI_SELECT, HIGH);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, HIGH);
 
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
@@ -1038,7 +1035,7 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 	WaitForIdle(BUSY_WAIT);
 
 	// start transfer
-	gpio_set_level(SX126x_SPI_SELECT, LOW);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, LOW);
 
 	// send command byte
 	if(debugPrint) {
@@ -1055,7 +1052,7 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 	}
 
 	// stop transfer
-	gpio_set_level(SX126x_SPI_SELECT, HIGH);
+	gpio_set_level((gpio_num_t)SX126x_SPI_SELECT, HIGH);
 
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
